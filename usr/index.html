@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sarıgül v17.2 - MOBİL UYUMLU</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        /* EKRAN TAŞMASINI ÖNLEYEN KODLAR */
+        * { box-sizing: border-box; } 
+        
+        :root { --ana: #2c3e50; --arka: #f4f7f6; --yesil: #2ecc71; --kirmizi: #e74c3c; --mavi: #3498db; --mor: #8e44ad; --altin: #f1c40f; --wp: #25D366; }
+        body { font-family: sans-serif; padding: 5px; background: var(--arka); margin: 0; overflow-x: hidden; }
+        .ozet-kart { background: var(--ana); color: white; padding: 12px; border-radius: 12px; text-align: center; margin-bottom: 8px; display: flex; justify-content: space-around; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .ozet-kart div { flex: 1; border-right: 1px solid #444; cursor: pointer; }
+        .ozet-kart span { display: block; font-size: 14px; font-weight: bold; margin-top: 4px; }
+        .panel { background:#fff; padding:10px; border-radius:12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom:10px; width: 100%; }
+        
+        input, select { width: 100%; padding:10px; border:1px solid #ccc; border-radius:8px; font-size:13px; outline: none; }
+        
+        table { width:100%; border-collapse:collapse; background:white; font-size: 10px; border-radius: 8px; overflow: hidden; }
+        th { background: var(--ana); color: white; padding: 10px 2px; text-align:center; }
+        td { padding: 8px 2px; border-bottom: 1px solid #eee; text-align: center; word-break: break-word; }
+        tr:nth-child(even) { background-color: #fafafa; }
+        .btn { padding: 10px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 10px; transition: 0.2s; }
+        .tab-btn { padding: 12px; background: #ddd; border: none; flex: 1; font-weight: bold; cursor: pointer; }
+        .tab-active { background: #fff; border-bottom: 4px solid var(--ana); }
+    </style>
+</head>
+<body>
+
+    <div class="ozet-kart">
+        <div onclick="gosterGizle('kar')">NET KÂR <span id="toplamKar">****</span></div>
+        <div onclick="gosterGizle('ciro')">CİRO <span id="gunlukCiro">****</span></div>
+        <div onclick="gosterGizle('alacak')">ALACAK <span id="toplamAlacak">****</span></div>
+    </div>
+
+    <div id="reader" style="display:none; width:100%; border:2px dashed var(--mor); margin-bottom:10px;"></div>
+
+    <div style="display: flex; gap:5px; margin-bottom:10px;">
+        <button id="btnStok" class="tab-btn tab-active" onclick="sekmeAc('stok')">STOK VE SATIŞ</button>
+        <button id="btnVeresiye" class="tab-btn" onclick="sekmeAc('veresiye')">VERESİYE</button>
+    </div>
+
+    <div id="stokPaneli">
+        <div class="panel">
+            <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                <div style="display:flex; gap:4px; width:100%;">
+                    <button class="btn" style="background:var(--mor); flex:1;" onclick="barkodAc()">KMR</button>
+                    <input type="text" id="uAd" list="urunListesi" oninput="fiyatHafizasi(); tabloFiltrele();" placeholder="ÜRÜN ARA VEYA EKLE" style="flex:5;">
+                </div>
+                <datalist id="urunListesi"></datalist>
+                
+                <div style="display:flex; gap:4px; width:100%;">
+                    <input type="number" id="uAdet" value="1" style="flex:1; min-width:0; text-align:center" placeholder="Adet">
+                    <input type="number" id="uAlis" placeholder="ALIŞ ₺" style="flex:2; min-width:0; border-color: #888;">
+                    <input type="number" id="uSatis" placeholder="SATIŞ ₺" style="flex:2; min-width:0; border-color: var(--mavi);">
+                </div>
+
+                <select id="uTur" style="width:100%" onchange="turKontrol(); fiyatHafizasi();">
+                    <option value="Giriş">MAL ALIŞI</option>
+                    <option value="Çıkış" selected>PEŞİN SATIŞ</option>
+                    <option value="Veresiye">VERESİYE YAZ</option>
+                </select>
+                
+                <div id="veresiyeDetay" style="display:none; width:100%; gap:4px;">
+                    <input type="text" id="mAd" placeholder="MÜŞTERİ ADI" style="flex:1; min-width:0; border:1px solid var(--altin)">
+                    <input type="tel" id="mTel" placeholder="TELEFON" style="flex:1; min-width:0; border:1px solid var(--wp)">
+                </div>
+                
+                <button class="btn" style="background:var(--ana); width:100%; padding:15px; font-size:12px;" onclick="ekle()">İŞLEMİ KAYDET</button>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 5px; display: flex; justify-content: flex-end;">
+            <button class="btn" style="background:var(--mor); padding: 5px 15px;" onclick="tabloGizleAc()">👁 GİZLE / AÇ</button>
+        </div>
+
+        <table id="stokTablo">
+            <thead>
+                <tr><th>NO</th><th>ÜRÜN</th><th>STOK</th><th>ALIŞ</th><th>SATIŞ</th><th>BİRİM KÂR</th><th>NET KÂR</th><th>İŞLEM</th></tr>
+            </thead>
+            <tbody id="stokGovde"></tbody>
+        </table>
+    </div>
+
+    <div id="veresiyePaneli" style="display:none">
+        <div class="panel" style="display:flex; gap:5px; flex-wrap:wrap">
+            <input type="text" id="odemeAd" placeholder="Müşteri Adı" style="flex:2">
+            <input type="number" id="odemeTutar" placeholder="Tutar ₺" style="flex:1">
+            <button class="btn" style="background:var(--yesil); flex:1; min-width:80px;" onclick="odemeAl()">ÖDEME AL</button>
+            <button class="btn" style="background:var(--kirmizi); width:100%" onclick="pdfIndir()">PDF İNDİR</button>
+        </div>
+        <table id="veresiyeTablo">
+            <thead><tr><th>Müşteri</th><th>Kalan Borç</th><th>İşlem</th></tr></thead>
+            <tbody id="veresiyeGovde"></tbody>
+        </table>
+    </div>
+
+    <div class="panel" style="display: flex; gap: 4px; flex-wrap: wrap;">
+        <button class="btn" style="background:var(--mavi); flex:1" onclick="bulutaGonder(event)">BULUT YEDEK</button>
+        <button class="btn" style="background:var(--ana); flex:1" onclick="buluttanGetir(event)">BULUT GETİR</button>
+        <button class="btn" style="background:var(--yesil); flex:1" onclick="excelIndir()">EXCEL</button>
+        <button class="btn" style="background:var(--kirmizi); width:40px;" onclick="sifirla()">X</button>
+    </div>
+
+    <script>
+        // SENİN YENİ VE KALICI LİNKİN:
+        const BULUT_URL = "https://script.google.com/macros/s/AKfycbz3IVwjWm2KWkNk2-_Br7YGmT1Kwa0Pw7ufRh1jgA1YtWG5qlSXYWR8YafIS8IMIp8gUQ/exec"; 
+        
+        let veriler = JSON.parse(localStorage.getItem("sarigul_v17_db")) || [];
+        if (veriler.length === 0) {
+            let eskiVeriler = JSON.parse(localStorage.getItem("sarigul_v16_db")) || JSON.parse(localStorage.getItem("sarigul_v15_db")) || [];
+            if (eskiVeriler.length > 0) {
+                veriler = eskiVeriler.map(item => {
+                    let alis = 0, satis = 0;
+                    if (item.fiyat !== undefined) {
+                        if (item.tur === "Giriş") alis = item.fiyat;
+                        else satis = item.fiyat;
+                    } else {
+                        alis = item.alis || 0; satis = item.satis || 0;
+                    }
+                    return { id: item.id, ad: item.ad, adet: item.adet, alis: alis, satis: satis, tur: item.tur, musteri: item.musteri, tel: item.tel };
+                });
+                localStorage.setItem("sarigul_v17_db", JSON.stringify(veriler));
+            }
+        }
+
+        let gizliMod = { kar: true, ciro: true, alacak: true, tablo: false };
+        let degerler = { kar: 0, ciro: 0, alacak: 0 };
+        let html5QrCode = null;
+
+        function gosterGizle(tip) { gizliMod[tip] = !gizliMod[tip]; ekraniGuncelle(); }
+        function tabloGizleAc() { gizliMod.tablo = !gizliMod.tablo; ciz(); }
+        function ekraniGuncelle() {
+            document.getElementById("toplamKar").innerText = gizliMod.kar ? "****" : degerler.kar.toFixed(2);
+            document.getElementById("gunlukCiro").innerText = gizliMod.ciro ? "****" : degerler.ciro.toFixed(2);
+            document.getElementById("toplamAlacak").innerText = gizliMod.alacak ? "****" : degerler.alacak.toFixed(2);
+        }
+
+        function fiyatHafizasi() {
+            const ad = document.getElementById("uAd").value.trim().toUpperCase('tr-TR');
+            if(!ad) return;
+            const urunKayitlari = veriler.filter(v => v.ad.toUpperCase('tr-TR') === ad);
+            const sonKayit = [...urunKayitlari].reverse().find(v => v.tur !== "Ödeme");
+            if(sonKayit) {
+                document.getElementById("uAlis").value = sonKayit.alis || "";
+                document.getElementById("uSatis").value = sonKayit.satis || "";
+            }
+        }
+
+        function tabloFiltrele() {
+            let input = document.getElementById("uAd").value.toUpperCase('tr-TR');
+            let tr = document.getElementById("stokGovde").getElementsByTagName("tr");
+            for (let i = 0; i < tr.length; i++) {
+                let td = tr[i].getElementsByTagName("td")[1];
+                if (td) tr[i].style.display = td.innerText.toUpperCase('tr-TR').indexOf(input) > -1 ? "" : "none";
+            }
+        }
+
+        function turKontrol() { document.getElementById('veresiyeDetay').style.display = (document.getElementById('uTur').value === 'Veresiye') ? 'flex' : 'none'; }
+        
+        function sekmeAc(tip) {
+            document.getElementById('stokPaneli').style.display = tip === 'stok' ? 'block' : 'none';
+            document.getElementById('veresiyePaneli').style.display = tip === 'veresiye' ? 'block' : 'none';
+            document.getElementById('btnStok').className = tip === 'stok' ? 'tab-btn tab-active' : 'tab-btn';
+            document.getElementById('btnVeresiye').className = tip === 'veresiye' ? 'tab-btn tab-active' : 'tab-btn';
+            ciz();
+        }
+
+        function ciz() {
+            const sG = document.getElementById("stokGovde"); const vG = document.getElementById("veresiyeGovde"); const dL = document.getElementById("urunListesi");
+            sG.innerHTML = ""; vG.innerHTML = ""; dL.innerHTML = "";
+            let dK = 0, gCi = 0, tA = 0; const urunler = {}, musteriler = {}; const bugun = new Date().toLocaleDateString();
+
+            veriler.forEach(i => {
+                const ad = (i.ad || "").toUpperCase('tr-TR').trim();
+                const mAd = (i.musteri || "").toUpperCase('tr-TR').trim();
+                
+                if(ad && i.tur !== "Ödeme") {
+                    if (!urunler[ad]) urunler[ad] = { gA: 0, cA: 0, gM: 0, cC: 0, sonAlisFiyat: 0, sonSatisFiyat: 0 };
+                    let m = parseFloat(i.adet) || 0, alis = parseFloat(i.alis) || 0, satis = parseFloat(i.satis) || 0;
+                    
+                    if(alis > 0) urunler[ad].sonAlisFiyat = alis;
+                    if(satis > 0) urunler[ad].sonSatisFiyat = satis;
+
+                    if (i.tur === "Giriş") { urunler[ad].gA += m; urunler[ad].gM += (m * alis); } 
+                    else { 
+                        urunler[ad].cA += m; urunler[ad].cC += (m * satis); 
+                        if(new Date(i.id).toLocaleDateString() === bugun && i.tur === "Çıkış") gCi += (m * satis);
+                    }
+                }
+                
+                if(mAd) {
+                    if(!musteriler[mAd]) musteriler[mAd] = { b: 0, t: "" };
+                    let tutar = (parseFloat(i.adet) || 1) * (parseFloat(i.satis) || 0);
+                    if(i.tur === "Veresiye") musteriler[mAd].b += tutar;
+                    if(i.tur === "Ödeme") musteriler[mAd].b -= parseFloat(i.satis) || 0; 
+                    if(i.tel) musteriler[mAd].t = i.tel;
+                }
+            });
+
+            Object.keys(urunler).sort().forEach((ad, index) => {
+                const d = urunler[ad]; const net = d.gA - d.cA;
+                let mal = d.gA > 0 ? (d.gM / d.gA) : d.sonAlisFiyat; 
+                
+                const netKar = d.cC - (d.cA * mal); 
+                const sFiyat = d.sonSatisFiyat; 
+                const birimKar = sFiyat - mal; 
+                
+                dK += netKar;
+                
+                const val = (v) => gizliMod.tablo ? "****" : v;
+
+                sG.innerHTML += `<tr>
+                    <td>${index + 1}</td>
+                    <td style="text-align:left"><b>${ad}</b></td>
+                    <td>${val(net)}</td>
+                    <td style="color:#888; font-weight:bold">${val(mal.toFixed(1))}</td>
+                    <td style="color:var(--mavi); font-weight:bold">${val(sFiyat.toFixed(0))}</td>
+                    <td style="color:#d35400; font-weight:bold">${val(birimKar.toFixed(0))}</td>
+                    <td style="color:green; font-weight:bold">${val(netKar.toFixed(0))}</td>
+                    <td>
+                        <button onclick="duzenle('${ad}')" style="border:none;background:none;color:blue;font-size:14px;padding:2px;">✎</button> 
+                        <button onclick="sil('${ad}')" style="border:none;background:none;color:red;font-size:14px;padding:2px;">✖</button>
+                    </td>
+                </tr>`;
+                dL.innerHTML += `<option value="${ad}">`;
+            });
+
+            Object.keys(musteriler).sort().forEach(m => {
+                const mb = musteriler[m]; if(Math.abs(mb.b) > 0.1) {
+                    tA += mb.b;
+                    vG.innerHTML += `<tr><td style="text-align:left">${m}</td><td style="color:red; font-weight:bold">${mb.b.toFixed(2)}</td><td><button onclick="wpGonder('${m}','${mb.t}',${mb.b})" style="background:var(--wp); color:white; border:none; padding:5px; border-radius:5px">WP</button></td></tr>`;
+                }
+            });
+            
+            degerler.kar = dK; degerler.ciro = gCi; degerler.alacak = tA; ekraniGuncelle();
+        }
+
+        function ekle() {
+            const ad = document.getElementById("uAd").value.trim().toUpperCase('tr-TR');
+            const adet = parseFloat(document.getElementById("uAdet").value) || 1;
+            const alis = parseFloat(document.getElementById("uAlis").value) || 0;
+            const satis = parseFloat(document.getElementById("uSatis").value) || 0;
+            const tur = document.getElementById("uTur").value;
+            const m = document.getElementById("mAd").value.trim().toUpperCase('tr-TR');
+            const t = document.getElementById("mTel").value.trim();
+            
+            if(!ad) return alert("Ürün adı girmelisiniz!");
+            
+            veriler.push({ id: Date.now(), ad, adet, alis, satis, tur, musteri: m, tel: t });
+            kaydet(); 
+            
+            document.getElementById("uAd").value = ""; 
+            document.getElementById("uAlis").value = ""; 
+            document.getElementById("uSatis").value = ""; 
+            document.getElementById("uAdet").value = "1";
+            document.getElementById("uAd").focus();
+        }
+
+        function duzenle(eskiAd) {
+            const urunKayitlari = veriler.filter(i => i.ad.toUpperCase('tr-TR') === eskiAd.toUpperCase('tr-TR'));
+            const sonKayit = [...urunKayitlari].reverse().find(v => v.tur !== "Ödeme");
+
+            const yeniAd = prompt("Ürün İsmi:", eskiAd); if (!yeniAd) return;
+            const yeniAlis = prompt("ALIŞ FİYATI:", sonKayit ? sonKayit.alis : 0);
+            const yeniSatis = prompt("SATIŞ FİYATI:", sonKayit ? sonKayit.satis : 0);
+
+            if (yeniAlis === null || yeniSatis === null) return;
+
+            veriler.forEach(i => {
+                if (i.ad.toUpperCase('tr-TR') === eskiAd.toUpperCase('tr-TR')) {
+                    i.ad = yeniAd.toUpperCase('tr-TR');
+                    i.alis = parseFloat(yeniAlis);
+                    i.satis = parseFloat(yeniSatis);
+                }
+            });
+            kaydet();
+        }
+
+        function odemeAl() {
+            const m = document.getElementById("odemeAd").value.toUpperCase('tr-TR');
+            const t = parseFloat(document.getElementById("odemeTutar").value);
+            if(!m || isNaN(t)) return;
+            veriler.push({ id: Date.now(), musteri: m, adet: 1, alis: 0, satis: t, tur: "Ödeme", ad: "TAHSİLAT" });
+            kaydet(); document.getElementById("odemeAd").value = ""; document.getElementById("odemeTutar").value = "";
+        }
+
+        function wpGonder(m, tel, t) {
+            let d = veriler.filter(v => v.musteri === m && v.tur === 'Veresiye').map(v => `• ${v.ad}: ${v.satis} TL`).join('%0A');
+            let mesaj = `*Sarıgül Ticaret*%0A*Borç:* ${t.toFixed(2)} TL%0A*Detay:*%0A${d}`;
+            let link = tel ? `https://api.whatsapp.com/send?phone=90${tel.replace(/\D/g, '').slice(-10)}&text=${mesaj}` : `https://api.whatsapp.com/send?text=${mesaj}`;
+            window.open(link, '_blank');
+        }
+
+        function kaydet() { localStorage.setItem("sarigul_v17_db", JSON.stringify(veriler)); ciz(); }
+        function sil(ad) { if(confirm("Silinsin mi?")) { veriler = veriler.filter(x => x.ad !== ad); kaydet(); } }
+        function sifirla() { if(confirm("TÜM SİSTEM SIFIRLANACAK! Emin misin?")) { veriler = []; kaydet(); } }
+        
+        async function bulutaGonder(event) {
+            if(veriler.length === 0) return alert("Gönderilecek veri yok.");
+            const b = event ? event.target : document.querySelector("button[onclick*='bulutaGonder']"); 
+            b.innerText = "YÜKLENİYOR...";
+            try {
+                await fetch(BULUT_URL, { method: "POST", body: JSON.stringify(veriler), mode: "no-cors" });
+                alert("Buluta Kaydedildi! ✅");
+            } catch(e) { alert("Bağlantı Hatası! Lütfen internetinizi kontrol edin."); }
+            b.innerText = "BULUT YEDEK";
+        }
+
+        async function buluttanGetir(event) {
+            if (!confirm("Buluttakiler cihazın üzerine yazılacak. Emin misin?")) return;
+            
+            const b = event ? event.target : document.querySelector("button[onclick*='buluttanGetir']");
+            const originalText = b.innerText;
+
+            try {
+                b.disabled = true;
+                b.innerText = "ALINIYOR...";
+
+                // Google Apps Script redirect takip etmek için jsonp veya özel bir CORS yönlendirmesi gerekir,
+                // Ancak basit fetch GET isteği genellikle redirect izler.
+                const r = await fetch(BULUT_URL);
+
+                if (!r.ok) {
+                    const text = await r.text();
+                    alert("Sunucu hata döndürdü!\n\nKod: " + r.status + "\nDetay: " + text);
+                    return;
+                }
+
+                const d = await r.json();
+                console.log("Gelen veri:", d);
+
+                if (d && d.length > 0) {
+                    veriler = d;
+                    kaydet();
+                    alert("Veriler Çekildi! ✅");
+                } else {
+                    alert("Bulutta kayıt bulunamadı.");
+                }
+
+            } catch (e) {
+                console.error("DETAYLI HATA:", e);
+                // CORS hatasını kullanıcı dostu göstermek
+                if(e.message.includes("Failed to fetch") || e.name === "TypeError") {
+                     alert("Veri çekilemedi!\nCORS veya Yönlendirme Hatası olabilir. \nGoogle Apps Script'in bir Web Uygulaması olarak (Anyone/Herkes) yetkisiyle yayınlandığından emin olun.\n\nHata: " + e.message);
+                } else {
+                     alert("Veri çekilemedi!\n\nHata: " + e.message);
+                }
+            } finally {
+                b.disabled = false;
+                b.innerText = originalText;
+            }
+        }
+
+        function excelIndir() { const ws = XLSX.utils.json_to_sheet(veriler); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Dükkan"); XLSX.writeFile(wb, "Sarigul_Yedek.xlsx"); }
+        function pdfIndir() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("Musteri Borclari", 10, 10); doc.autoTable({ html: '#veresiyeTablo', startY: 20 }); doc.save("Borclar.pdf"); }
+        window.onload = ciz;
+    </script>
+</body>
+</html>
